@@ -7,7 +7,7 @@
 
 import { StateGraph, START, END } from '@langchain/langgraph';
 import { z } from 'zod';
-import type { UserTier, Fund, InvestmentPreferences } from '../../shared/index.js';
+import type { UserTier, Fund, InvestmentPreferences } from '../../../shared/index.js';
 import { generateAgentReply } from './llm.js';
 
 // ── State Schema ──
@@ -63,25 +63,27 @@ const FUNDS: Fund[] = [
 
 // ── System Prompt ──
 
-const SYSTEM_PROMPT = `You are a wealth management AI assistant helping users invest their money.
+const SYSTEM_PROMPT = `You are a knowledgeable wealth management AI assistant helping users invest their money.
 
-Core investing principles you MUST follow:
-1. Diversification reduces risk - never recommend single stocks for beginners
-2. Risk tolerance must match time horizon (longer horizon = can take more risk)
-3. Conservative portfolios prioritize capital preservation (bonds, money market)
-4. Aggressive portfolios prioritize growth (equities, emerging markets)
-5. "Secure" means low-risk, diversified, highly liquid assets (treasury bonds, money market funds)
+You are NOT limited to a fixed fund list. You can discuss and reason about any security the user
+asks about - individual stocks (e.g. NVDA, AAPL), sectors, crypto, bonds, macro trends, and
+strategies. When live market research is provided to you, use it for current facts and figures.
+When you lack hard data, reason transparently and say what you're estimating rather than refusing.
+
+Helpful principles (guidance, not hard limits):
+1. Diversification generally reduces risk.
+2. Risk tolerance should consider time horizon (longer horizon = more room for risk).
+3. Conservative portfolios lean toward capital preservation; aggressive portfolios lean toward growth.
 
 Conversation guidelines:
-- If user says "I don't care, just put my money somewhere secure", immediately recommend conservative 
-  portfolio (e.g., 60% bonds, 40% diversified equities)
-- Otherwise, ask about: risk tolerance (1-10 scale), investment goals (retirement, growth, income), 
-  time horizon (short, medium, long term)
-- Keep responses concise and appropriate to user's sophistication level
-- For beginners: explain terms, avoid jargon, use analogies
-- For sophisticated users: be direct, provide data, acknowledge complexity
+- If the user says "I don't care, just put my money somewhere secure", recommend a conservative
+  portfolio (e.g., ~60% bonds, ~40% diversified equities).
+- Otherwise gather what you need (risk tolerance, goals, time horizon) but don't interrogate - infer
+  sensible defaults and move forward rather than re-asking the same question.
+- Match the user's sophistication: beginners get plain language and analogies; sophisticated users
+  get direct, data-aware analysis.
 
-After determining preferences, you will recommend appropriate funds from the available list.`;
+You may reference the curated funds when relevant, but you are free to answer broader questions too.`;
 
 // ── Node: Classify Intent ──
 
@@ -126,38 +128,89 @@ function detectLevelUpQuestion(message: string, tier: UserTier): boolean {
   return sophisticatedIndicators.some(p => p.test(message));
 }
 
-function extractPreferences(message: string): Partial<InvestmentPreferences> {
+/**
+ * Extract any preferences expressed in a single user message. `prevAgent` is the
+ * assistant message that immediately preceded it, used for context so a bare
+ * answer ("5", "conservative") is interpreted against the question that was asked.
+ */
+function extractPreferences(message: string, prevAgent: string = ''): Partial<InvestmentPreferences> {
   const prefs: Partial<InvestmentPreferences> = {};
-  
+  const askedRisk = /risk tolerance|scale of 1-10|1\s*-\s*10|how risky|risk comfort|risk level|risk parameters/i.test(prevAgent);
+  const askedHorizon = /time horizon|how long|when (do|will) you need|need this money/i.test(prevAgent);
+
   // Risk tolerance detection
-  const riskMatch = message.match(/risk.*?(\d+)/i) || message.match(/(\d+).*risk/i);
+  const riskMatch = message.match(/risk.*?(\d{1,2})/i) || message.match(/(\d{1,2}).*risk/i);
+  const bareNumber = message.trim().match(/^\s*(\d{1,2})\s*(?:\/\s*10)?\s*$/);
   if (riskMatch) {
-    prefs.riskTolerance = parseInt(riskMatch[1]);
+    prefs.riskTolerance = clampRisk(parseInt(riskMatch[1]));
+  } else if (bareNumber && askedRisk) {
+    // A lone number answering "rate your risk tolerance 1-10".
+    prefs.riskTolerance = clampRisk(parseInt(bareNumber[1]));
   } else if (/very.*(safe|low|conservative)/i.test(message) || /no risk/i.test(message)) {
     prefs.riskTolerance = 2;
   } else if (/high.*risk/i.test(message) || /aggressive/i.test(message) || /risky/i.test(message)) {
     prefs.riskTolerance = 9;
-  } else if (/moderate/i.test(message) || /balanced/i.test(message)) {
+  } else if (/\bconservative\b|\bcautious\b/i.test(message)) {
+    prefs.riskTolerance = 2;
+  } else if (/\b(balanced|moderate|middle|in between|in-between)\b/i.test(message)) {
     prefs.riskTolerance = 5;
+  } else if (/\b(growth|grow)\b/i.test(message) && askedRisk) {
+    prefs.riskTolerance = 8;
   }
-  
+
   // Goal detection
   if (/retire/i.test(message)) prefs.investmentGoal = 'retirement';
   else if (/grow/i.test(message) || /growth/i.test(message)) prefs.investmentGoal = 'growth';
   else if (/income/i.test(message) || /dividend/i.test(message)) prefs.investmentGoal = 'income';
-  else if (/preserv/i.test(message) || /safe/i.test(message) || /secur/i.test(message) || /capital.*protect/i.test(message)) prefs.investmentGoal = 'preservation';
-  
+  else if (/preserv/i.test(message) || /\bsafe\b/i.test(message) || /secur/i.test(message) || /\bconservative\b/i.test(message) || /capital.*protect/i.test(message)) prefs.investmentGoal = 'preservation';
+
   // Time horizon detection
   if (/short.*term/i.test(message) || /soon/i.test(message) || /year or two/i.test(message)) prefs.timeHorizon = 'short';
-  else if (/long.*term/i.test(message) || /decade/i.test(message) || /distant/i.test(message)) prefs.timeHorizon = 'long';
+  else if (/long.*term/i.test(message) || /decade/i.test(message) || /distant/i.test(message) || /\d{2,}\s*year/i.test(message)) prefs.timeHorizon = 'long';
   else if (/medium/i.test(message) || /few.*year/i.test(message) || /5.*year/i.test(message)) prefs.timeHorizon = 'medium';
-  
+  else if (askedHorizon && /\b(short)\b/i.test(message)) prefs.timeHorizon = 'short';
+  else if (askedHorizon && /\b(long)\b/i.test(message)) prefs.timeHorizon = 'long';
+
   return prefs;
+}
+
+function clampRisk(n: number): number {
+  if (Number.isNaN(n)) return 5;
+  return Math.max(1, Math.min(10, n));
+}
+
+/**
+ * Walk the WHOLE conversation and accumulate preferences turn-by-turn. This is
+ * the fix for the "agent re-asks the same question" loop: state is rebuilt from
+ * the full transcript each turn instead of relying on a single message or on
+ * preferences that were never persisted between turns.
+ */
+function deriveConversationState(
+  messages: Array<{ role: string; content: string }>,
+  existingPrefs: InvestmentPreferences | null,
+): { preferences: Partial<InvestmentPreferences>; isDefaultConservative: boolean } {
+  let preferences: Partial<InvestmentPreferences> = { ...(existingPrefs || {}) };
+  let isDefaultConservative = false;
+
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    if (m.role !== 'user') continue;
+    const prevAgent = messages.slice(0, i).reverse().find((x) => x.role === 'agent')?.content || '';
+
+    if (detectDefaultConservative(m.content)) isDefaultConservative = true;
+
+    const ext = extractPreferences(m.content, prevAgent);
+    if (ext.riskTolerance !== undefined) preferences.riskTolerance = ext.riskTolerance;
+    if (ext.investmentGoal !== undefined) preferences.investmentGoal = ext.investmentGoal;
+    if (ext.timeHorizon !== undefined) preferences.timeHorizon = ext.timeHorizon;
+  }
+
+  return { preferences, isDefaultConservative };
 }
 
 // ── Node: Get Fund Recommendations ──
 
-function getRecommendedFunds(prefs: InvestmentPreferences | null, isDefaultConservative: boolean): Fund[] {
+function getRecommendedFunds(prefs: Partial<InvestmentPreferences> | null, isDefaultConservative: boolean): Fund[] {
   if (isDefaultConservative || (prefs?.investmentGoal === 'preservation') || (prefs?.riskTolerance && prefs.riskTolerance <= 3)) {
     // Conservative: bonds + dividend + broad market
     return FUNDS.filter(f => ['BND', 'SCHD', 'SHY', 'VTI', 'BNDX'].includes(f.ticker.toUpperCase()));
@@ -233,7 +286,13 @@ function getRenderedComponentType(state: InvestmentAgentStateType): string | nul
   if (detectLevelUpQuestion(lastMsg, tier)) {
     return 'advanced-screener'; // Level-up: show sophisticated component
   }
-  
+
+  // Beginners always get tappable option buttons while we're still discovering
+  // their risk appetite - this is the "button they previously had".
+  if (tier === 'beginner' && stage === 'preference-discovery' && !prefs?.riskTolerance && !isDefaultCon) {
+    return 'beginner-choice';
+  }
+
   if (stage === 'preference-discovery' && (prefs?.riskTolerance || isDefaultCon)) {
     return tier === 'beginner' ? 'simple-choice' : 
            tier === 'intermediate' ? 'fund-grid' : 
@@ -260,48 +319,60 @@ function getRenderedComponentType(state: InvestmentAgentStateType): string | nul
 // ── Graph Nodes ──
 
 async function classifyNode(state: InvestmentAgentStateType): Promise<Partial<InvestmentAgentStateType>> {
-  const lastUserMsg = [...state.messages].reverse().find(m => m.role === 'user');
+  const lastUserMsg = [...state.messages].reverse().find((m) => m.role === 'user');
   if (!lastUserMsg) {
     return { stage: 'preference-discovery' };
   }
-  
   const content = lastUserMsg.content;
-  
-  // Check for "I don't care" pattern
-  if (detectDefaultConservative(content)) {
+
+  // Accumulate preferences across the ENTIRE conversation (fixes the re-ask loop).
+  const { preferences, isDefaultConservative } = deriveConversationState(
+    state.messages,
+    (state.preferences as InvestmentPreferences | null) ?? null,
+  );
+
+  // "I don't care, just keep it safe" → jump straight to a conservative recommendation.
+  if (isDefaultConservative) {
     return {
       stage: 'fund-selection',
       isDefaultConservative: true,
       preferences: {
-        riskTolerance: 3,
+        riskTolerance: preferences.riskTolerance ?? 3,
         investmentGoal: 'preservation',
-        timeHorizon: 'medium',
+        timeHorizon: preferences.timeHorizon ?? 'medium',
       },
     };
   }
-  
-  // Extract any preferences from message
-  const extractedPrefs = extractPreferences(content);
-  if (Object.keys(extractedPrefs).length > 0) {
-    const mergedPrefs = {
-      riskTolerance: extractedPrefs.riskTolerance ?? state.preferences?.riskTolerance ?? 5,
-      investmentGoal: extractedPrefs.investmentGoal ?? state.preferences?.investmentGoal ?? 'growth',
-      timeHorizon: extractedPrefs.timeHorizon ?? state.preferences?.timeHorizon ?? 'medium',
-    };
-    
-    const allKnown = mergedPrefs.riskTolerance && mergedPrefs.investmentGoal && mergedPrefs.timeHorizon;
-    return {
-      stage: allKnown ? 'fund-selection' : 'preference-discovery',
-      preferences: mergedPrefs,
-    };
+
+  const hasRisk = preferences.riskTolerance !== undefined;
+  const hasGoal = preferences.investmentGoal !== undefined;
+  const hasHorizon = preferences.timeHorizon !== undefined;
+
+  // Beginners only need a risk signal (one button tap) before we recommend - we
+  // infer the rest so they aren't interrogated. Higher tiers gather all three.
+  const beginnerReady = state.tier === 'beginner' && hasRisk;
+  const advancedReady = state.tier !== 'beginner' && hasRisk && hasGoal && hasHorizon;
+
+  // Explicit confirmation only counts once we already have a recommendation to confirm.
+  if (hasRisk && /^(yes|yep|ok(ay)?|sure|accept|confirm|go ahead|let'?s do it|do it)\b/i.test(content.trim())) {
+    return { stage: 'confirmation', preferences: fillDefaults(preferences) };
   }
-  
-  // Check if we're confirming
-  if (/yes|ok|sure|accept|confirm|go ahead|let'?s do it/i.test(content)) {
-    return { stage: 'confirmation' };
+
+  if (beginnerReady || advancedReady) {
+    return { stage: 'fund-selection', preferences: fillDefaults(preferences) };
   }
-  
-  return { stage: 'preference-discovery' };
+
+  // Still gathering - keep whatever we know so generateAgentResponse asks the next gap.
+  return { stage: 'preference-discovery', preferences: preferences as any };
+}
+
+/** Fill any missing preference fields with sensible defaults for fund selection. */
+function fillDefaults(prefs: Partial<InvestmentPreferences>): InvestmentPreferences {
+  return {
+    riskTolerance: prefs.riskTolerance ?? 5,
+    investmentGoal: prefs.investmentGoal ?? 'growth',
+    timeHorizon: prefs.timeHorizon ?? 'medium',
+  };
 }
 
 async function agentResponseNode(state: InvestmentAgentStateType): Promise<Partial<InvestmentAgentStateType>> {

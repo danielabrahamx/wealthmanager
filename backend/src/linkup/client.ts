@@ -103,6 +103,51 @@ export async function fetchStockData(ticker: string): Promise<StockData | null> 
   }
 }
 
+export function isLinkupEnabled(): boolean {
+  return !!process.env.LINKUP_API_KEY;
+}
+
+/**
+ * Free-form live research via Linkup. Returns a synthesized, sourced answer the
+ * LLM can use to discuss ANY security or market topic (individual stocks, macro,
+ * sectors) instead of being limited to the curated fund list. Returns null when
+ * Linkup is disabled or the call fails so the caller degrades gracefully.
+ */
+export async function searchLive(query: string): Promise<string | null> {
+  if (!isLinkupEnabled()) return null;
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+
+  try {
+    const cacheKey = `live:${trimmed.toLowerCase().slice(0, 120)}`;
+    const cached = await getCachedMarketData(cacheKey);
+    if (cached) return cached as string;
+
+    const client = getLinkupClient();
+    const result = (await client.search({
+      query: `${trimmed} (current market data, prices, outlook)`,
+      depth: 'standard',
+      outputType: 'sourcedAnswer',
+    })) as { answer?: string; sources?: Array<{ name?: string; url?: string }> };
+
+    const answer = (result?.answer || '').trim();
+    if (!answer) return null;
+
+    const sources = (result?.sources || [])
+      .slice(0, 3)
+      .map((s) => s.name || s.url)
+      .filter(Boolean)
+      .join(', ');
+    const out = sources ? `${answer}\n\nSources: ${sources}` : answer;
+
+    await cacheMarketData(cacheKey, out, 900);
+    return out;
+  } catch (err) {
+    console.warn('[linkup] live search failed:', (err as Error).message?.slice(0, 120));
+    return null;
+  }
+}
+
 /**
  * Search for financial news via Linkup
  */

@@ -7,11 +7,11 @@
  */
 import { Router, Request, Response } from 'express';
 import { runInvestmentAgent, FUNDS } from '../agent/investment-agent.js';
-import { getUserProfile } from '../redis/client.js';
+import { getUserProfile, updateUserPreferences } from '../redis/client.js';
 import { runMonteCarloSimulation } from '../linkup/client.js';
 import { buildSurfaceFor, buildConfirmation } from '../a2ui/builder.js';
 import { streamAguiRun } from '../agui/stream.js';
-import type { UserProfile, UserTier } from '../../shared/index.js';
+import type { UserProfile, UserTier, InvestmentPreferences } from '../../../shared/index.js';
 
 export const aguiRouter = Router();
 
@@ -51,7 +51,7 @@ aguiRouter.post('/', async (req: Request, res: Response) => {
 
   // ── UI action dispatched from an A2UI button ──
   if (action) {
-    await handleAction(res, { action, tier, profile, threadId });
+    await handleAction(res, { action, tier, profile, threadId, conversationHistory: conversationHistory || [] });
     return;
   }
 
@@ -74,13 +74,45 @@ aguiRouter.post('/', async (req: Request, res: Response) => {
 
 async function handleAction(
   res: Response,
-  ctx: { action: { name: string; context?: Record<string, unknown> }; tier: UserTier; profile: UserProfile; threadId: string },
+  ctx: {
+    action: { name: string; context?: Record<string, unknown> };
+    tier: UserTier;
+    profile: UserProfile;
+    threadId: string;
+    conversationHistory: Array<{ role: 'user' | 'agent' | 'system'; content: string }>;
+  },
 ): Promise<void> {
-  const { action, tier, profile, threadId } = ctx;
+  const { action, tier, profile, threadId, conversationHistory } = ctx;
   const context = action.context || {};
   const fundIds = Array.isArray(context.fundIds) ? (context.fundIds as string[]) : [];
 
   switch (action.name) {
+    // Beginner option button → set a risk profile and produce a recommendation.
+    case 'set_profile': {
+      const choice = String(context.choice || 'balanced');
+      const prefs: InvestmentPreferences =
+        choice === 'conservative'
+          ? { riskTolerance: 2, investmentGoal: 'preservation', timeHorizon: 'medium' }
+          : choice === 'growth'
+          ? { riskTolerance: 8, investmentGoal: 'growth', timeHorizon: 'long' }
+          : { riskTolerance: 5, investmentGoal: 'growth', timeHorizon: 'medium' };
+
+      await updateUserPreferences(profile.userId, prefs).catch(() => {});
+
+      const result = await runInvestmentAgent(
+        profile.userId,
+        tier,
+        profile.fundsDeposited,
+        `I'd like a ${choice} approach`,
+        conversationHistory,
+        prefs,
+      );
+      const a2ui = buildSurfaceFor(result.componentType, tier, result.response, result.recommendedFunds, {
+        hasLiveData: hasLinkup(),
+      });
+      streamAguiRun(res, { threadId, text: result.response, a2ui });
+      return;
+    }
     case 'invest':
     case 'select_fund': {
       const picked = FUNDS.filter((f) => fundIds.includes(f.id));

@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import { Router, Request, Response } from 'express';
 import { saveUserProfile, getUserProfile, updateFundsDeposited } from '../redis/client.js';
-import type { UserTier } from '../../shared/index.js';
+import type { UserTier } from '../../../shared/index.js';
 
 export const onboardingRouter = Router();
 

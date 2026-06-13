@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getUserProfile } from '../redis/client.js';
 import { fetchStockData, fetchMarketNews, runMonteCarloSimulation } from '../linkup/client.js';
-import type { UserTier } from '../../shared/index.js';
+import type { UserTier } from '../../../shared/index.js';
 
 export const reportingRouter = Router();
 

@@ -12,7 +12,8 @@
  *   DEEPSEEK_BASE_URL  optional, defaults to "https://api.deepseek.com/v1"
  */
 import { ChatOpenAI } from '@langchain/openai';
-import type { Fund, InvestmentPreferences, UserTier } from '../../shared/index.js';
+import type { Fund, InvestmentPreferences, UserTier } from '../../../shared/index.js';
+import { searchLive } from '../linkup/client.js';
 
 let cached: ChatOpenAI | null | undefined;
 
@@ -28,8 +29,8 @@ export function getChatModel(): ChatOpenAI | null {
   cached = new ChatOpenAI({
     apiKey,
     model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
-    temperature: 0.4,
-    maxTokens: 320,
+    temperature: 0.5,
+    maxTokens: 700,
     configuration: { baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1' },
   });
   return cached;
@@ -37,6 +38,14 @@ export function getChatModel(): ChatOpenAI | null {
 
 export function isLlmEnabled(): boolean {
   return getChatModel() !== null;
+}
+
+/** Resolve a promise but give up after `ms` so a slow Linkup call can't stall a reply. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
 }
 
 interface ReplyContext {
@@ -57,24 +66,23 @@ const PERSONA: Record<UserTier, string[]> = {
   beginner: [
     'You are talking to a COMPLETE BEGINNER who has never invested before and finds money stressful.',
     'Tone: warm, calm, encouraging - like a kind friend, not a banker.',
-    'HARD RULES:',
-    '- NEVER use ticker symbols (e.g. VTI, BND, SPY) or fund names. Say "a mix of investments" instead.',
-    '- NEVER use jargon: no "diversified", "allocation", "equities", "bonds", "expense ratio", "volatility", "portfolio".',
-    '- NEVER quote percentages, returns, or risk numbers.',
-    '- Use everyday analogies (a savings jar, planting a tree, a balanced meal).',
-    '- Max 3 short sentences. Reassure them they are making a smart, safe choice.',
+    'Style rules:',
+    '- Avoid ticker symbols and jargon; translate any data into plain language and everyday analogies.',
+    '- You CAN still answer any question they ask (e.g. about a company they heard of) - just keep it simple.',
+    '- Keep it to ~3 short sentences and reassure them.',
   ],
   intermediate: [
     'You are talking to someone comfortable with investing basics who wants practical guidance.',
-    'Tone: clear, practical, confident. Light financial terms are welcome.',
-    'You MAY reference fund names, ticker symbols, and projected returns from the list provided.',
-    'Explain the "why" briefly (e.g. growth vs. stability) without lecturing. Max ~80 words.',
+    'Tone: clear, practical, confident. Financial terms are welcome.',
+    'You can discuss any security, sector, or strategy - not just the curated funds. Use the live',
+    'research below for current figures when relevant. Explain the "why" briefly. Max ~100 words.',
   ],
   sophisticated: [
     'You are talking to an experienced investor fluent in markets and risk.',
     'Tone: direct, data-aware, concise. No hand-holding, no basic definitions.',
-    'Reference tickers, risk levels, projected returns, and metrics (Sharpe, beta, drawdown) where relevant.',
-    'Be precise and efficient. Max ~80 words.',
+    'You can analyze ANY instrument the user raises - individual stocks (NVDA, etc.), crypto, macro,',
+    'sectors - not just the listed funds. Use the live research below for current data; reference',
+    'metrics (Sharpe, beta, drawdown) where useful. If data is uncertain, say so. Max ~120 words.',
   ],
 };
 
@@ -98,12 +106,17 @@ export async function generateAgentReply(ctx: ReplyContext): Promise<string | nu
           .map((f) => `${f.ticker} (${f.name}, ${f.riskLevel} risk, ~${f.projectedReturn}% projected)`)
           .join('; ');
 
+  // Live market research via Linkup so the model isn't limited to the static
+  // fund list. Best-effort with a short timeout; we degrade silently on failure.
+  const liveResearch = await withTimeout(searchLive(ctx.message), 6000).catch(() => null);
+
   const system = [
     ...PERSONA[ctx.tier],
     'A separate system renders the interactive UI (fund cards / choices) - do NOT describe buttons or UI.',
-    'Never invent tickers, prices, or returns.',
+    'Do not fabricate precise prices or returns; prefer the live research below, and flag uncertainty otherwise.',
     'Do not use markdown headings.',
-    fundList ? `Recommended funds you may reference: ${fundList}` : '',
+    fundList ? `Curated funds you may reference: ${fundList}` : '',
+    liveResearch ? `Live market research (via Linkup) - use this for current facts and any security asked about:\n${liveResearch}` : '',
     ctx.preferences ? `Known preferences: ${JSON.stringify(ctx.preferences)}.` : '',
   ]
     .filter(Boolean)

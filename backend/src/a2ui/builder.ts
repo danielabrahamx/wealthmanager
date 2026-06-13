@@ -11,7 +11,7 @@
  * Component nodes are { component, id, ...props }. Children are referenced by
  * id (never inline). See the basic catalog in @a2ui/web_core for prop schemas.
  */
-import type { Fund, UserTier } from '../../shared/index.js';
+import type { Fund, UserTier } from '../../../shared/index.js';
 
 export const A2UI_CATALOG_ID = 'https://a2ui.org/specification/v0_9/basic_catalog.json';
 export const A2UI_SURFACE_ID = 'wealth-surface';
@@ -69,6 +69,38 @@ function riskLabel(level: Fund['riskLevel']): string {
 
 function pct(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+}
+
+/**
+ * Beginner - the initial set of tappable options (the "button they previously
+ * had"). Each option dispatches a `set_profile` action carrying the chosen risk
+ * appetite, which the agent turns into a recommendation on the next turn.
+ */
+export function buildBeginnerChoice(question: string): A2uiMessage[] {
+  const s = new Surface();
+  const children: string[] = [];
+
+  children.push(s.add('Text', { text: question || 'How would you like to invest your money?', variant: 'h3' }));
+
+  const option = (label: string, sub: string, choice: string, variant: string) =>
+    s.add('Button', {
+      child: s.add('Column', {
+        children: [
+          s.add('Text', { text: label, variant: 'h5' }),
+          s.add('Text', { text: sub, variant: 'caption' }),
+        ],
+        align: 'start',
+      }),
+      variant,
+      action: event('set_profile', { choice }),
+    });
+
+  children.push(option('Keep it safe', 'Slow, steady, low chance of loss', 'conservative', 'primary'));
+  children.push(option('A balanced mix', 'Some growth with some protection', 'balanced', 'default'));
+  children.push(option('Go for growth', 'Higher potential, bigger ups and downs', 'growth', 'default'));
+
+  s.root('Column', { children, justify: 'start', align: 'stretch' });
+  return envelope(s);
 }
 
 /** Beginner - a single, reassuring binary choice. */
@@ -220,6 +252,8 @@ export function buildSurfaceFor(
   opts: { hasLiveData?: boolean } = {},
 ): A2uiMessage[] | null {
   switch (componentType) {
+    case 'beginner-choice':
+      return buildBeginnerChoice(recommendation);
     case 'simple-choice':
       return buildSimpleChoice(recommendation, funds);
     case 'fund-grid':

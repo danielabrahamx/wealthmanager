@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { runInvestmentAgent, FUNDS } from '../agent/investment-agent.js';
 import { getUserProfile } from '../redis/client.js';
-import type { UserTier, RenderedComponent, Fund, UserProfile } from '../../shared/index.js';
+import type { UserTier, RenderedComponent, Fund, UserProfile } from '../../../shared/index.js';
 
 export const agentRouter = Router();
 

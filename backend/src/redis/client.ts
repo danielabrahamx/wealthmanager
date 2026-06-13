@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
-import type { UserProfile, UserTier, InvestmentPreferences } from '../../shared/index.js';
+import type { UserProfile, UserTier, InvestmentPreferences } from '../../../shared/index.js';
 
 let client: RedisClientType | null = null;
 
