@@ -3,6 +3,7 @@
  */
 import React, { useState } from 'react';
 import type { UserTier, UserProfile } from '../../../shared/index.js';
+import { color, radius, shadow, font } from '../lib/theme';
 
 interface OnboardingFlowProps {
   onComplete: (profile: UserProfile) => void;
@@ -66,24 +67,25 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+      fontFamily: font.sans,
+      background: `radial-gradient(120% 120% at 50% 0%, ${color.brandDark} 0%, #0d1133 55%, #06081f 100%)`,
     }}>
       <div style={{
-        background: 'white',
-        borderRadius: '16px',
+        background: color.white,
+        borderRadius: radius.lg,
         padding: '40px',
         maxWidth: '560px',
         width: '90%',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+        boxShadow: shadow.deep,
       }}>
         {/* Progress indicator */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
           {[1, 2].map(s => (
             <div key={s} style={{
               flex: 1,
-              height: '4px',
+              height: '3px',
               borderRadius: '2px',
-              background: s <= step ? '#2563eb' : '#e5e7eb',
+              background: s <= step ? color.purple : color.border,
               transition: 'background 0.3s',
             }} />
           ))}
@@ -91,10 +93,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         {step === 1 && (
           <>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: '#111827' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.04em', marginBottom: '8px', color: color.heading }}>
               What best describes you?
             </h2>
-            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            <p style={{ color: color.body, marginBottom: '24px', fontWeight: 300 }}>
               Your experience level helps us tailor the right interface for you.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -107,28 +109,30 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     alignItems: 'center',
                     gap: '16px',
                     padding: '20px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '12px',
-                    background: 'white',
+                    border: `1px solid ${color.border}`,
+                    borderRadius: radius.lg,
+                    background: color.white,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.18s ease',
                     textAlign: 'left',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#2563eb';
-                    e.currentTarget.style.background = '#f8faff';
+                    e.currentTarget.style.borderColor = color.purple;
+                    e.currentTarget.style.background = color.purpleTint;
+                    e.currentTarget.style.boxShadow = shadow.elevated;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.borderColor = color.border;
+                    e.currentTarget.style.background = color.white;
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <span style={{ fontSize: '2rem' }}>{icon}</span>
                   <div>
-                    <div style={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>
+                    <div style={{ fontWeight: 500, color: color.heading, fontSize: '1.05rem' }}>
                       {label}
                     </div>
-                    <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '2px' }}>
+                    <div style={{ color: color.body, fontSize: '0.875rem', marginTop: '2px', fontWeight: 300 }}>
                       {desc}
                     </div>
                   </div>
@@ -146,7 +150,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#2563eb',
+                  color: color.purple,
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                   padding: 0,
@@ -155,14 +159,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 ← Back to tier selection
               </button>
             </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: '#111827' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.04em', marginBottom: '8px', color: color.heading }}>
               I would like to invest my money.
             </h2>
-            <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            <p style={{ color: color.body, marginBottom: '24px', fontWeight: 300 }}>
               How much would you like to deposit? (Simulated funds for this demo)
             </p>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: '#374151' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: color.label }}>
                 Investment Amount
               </label>
               <div style={{ position: 'relative' }}>
@@ -171,8 +175,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   left: '16px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#6b7280',
-                  fontWeight: 600,
+                  color: color.body,
+                  fontWeight: 500,
                 }}>$</span>
                 <input
                   type="number"
@@ -182,17 +186,19 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   style={{
                     width: '100%',
                     padding: '14px 16px 14px 36px',
-                    border: `2px solid ${error ? '#ef4444' : '#e5e7eb'}`,
-                    borderRadius: '12px',
+                    border: `1px solid ${error ? color.danger : color.border}`,
+                    borderRadius: radius.md,
                     fontSize: '1.25rem',
+                    fontFeatureSettings: font.tnum,
+                    color: color.heading,
                     outline: 'none',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = error ? '#ef4444' : '#e5e7eb'}
+                  onFocus={(e) => e.target.style.borderColor = color.purple}
+                  onBlur={(e) => e.target.style.borderColor = error ? color.danger : color.border}
                 />
               </div>
               {error && (
-                <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '6px' }}>{error}</p>
+                <p style={{ color: color.danger, fontSize: '0.875rem', marginTop: '6px' }}>{error}</p>
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -202,16 +208,17 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   onClick={() => { setAmount(amt.toString()); setError(''); }}
                   style={{
                     padding: '8px 14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    background: amount === amt.toString() ? '#2563eb' : 'white',
-                    color: amount === amt.toString() ? 'white' : '#374151',
+                    border: `1px solid ${amount === amt.toString() ? color.purple : color.border}`,
+                    borderRadius: radius.md,
+                    background: amount === amt.toString() ? color.purple : color.white,
+                    color: amount === amt.toString() ? color.white : color.label,
                     cursor: 'pointer',
                     fontSize: '0.8rem',
                     fontWeight: 500,
+                    fontFeatureSettings: font.tnum,
                   }}
                 >
-                  
+                  ${amt.toLocaleString()}
                 </button>
               ))}
             </div>
@@ -221,20 +228,21 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               style={{
                 width: '100%',
                 padding: '16px',
-                background: loading ? '#93c5fd' : '#2563eb',
+                background: loading ? color.purpleSoft : color.purple,
                 color: 'white',
                 border: 'none',
-                borderRadius: '12px',
-                fontSize: '1.1rem',
-                fontWeight: 600,
+                borderRadius: radius.md,
+                fontSize: '1.05rem',
+                fontWeight: 400,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 marginTop: '16px',
+                boxShadow: loading ? 'none' : shadow.elevated,
                 transition: 'background 0.2s',
               }}
             >
               {loading ? 'Setting up...' : `Deposit $${amount ? parseInt(amount).toLocaleString() : '0'} & Start Investing`}
             </button>
-            <p style={{ color: '#6b7280', fontSize: '0.75rem', textAlign: 'center', marginTop: '12px' }}>
+            <p style={{ color: color.body, fontSize: '0.75rem', textAlign: 'center', marginTop: '12px' }}>
               This is simulated money for demonstration purposes.
             </p>
           </>

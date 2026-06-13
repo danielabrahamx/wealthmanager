@@ -8,6 +8,7 @@
 import { StateGraph, START, END } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { UserTier, Fund, InvestmentPreferences } from '../../shared/index.js';
+import { generateAgentReply } from './llm.js';
 
 // ── State Schema ──
 
@@ -393,26 +394,35 @@ export async function runInvestmentAgent(
     isDefaultConservative: false,
   };
   
-  let result;
+  // Compute the deterministic result (which UI to render, which funds, stage).
+  let base: Awaited<ReturnType<typeof runInvestmentAgent>>;
   try {
-    result = await graph.invoke(initialState);
+    const typedResult = (await graph.invoke(initialState)) as InvestmentAgentStateType;
+    base = {
+      response: typedResult.messages[typedResult.messages.length - 1]?.content || '',
+      stage: typedResult.stage,
+      componentType: typedResult.renderedComponent,
+      recommendedFunds: FUNDS.filter(f => typedResult.recommendedFunds.includes(f.id)),
+      selectedFunds: FUNDS.filter(f => typedResult.selectedFunds.includes(f.id)),
+      preferences: typedResult.preferences as any,
+    };
   } catch (err) {
     console.warn('[agent] LangGraph invoke failed, using fallback:', (err as Error).message?.substring(0, 100));
-    return fallbackAgentResponse(tier, fundsDeposited, message, conversationHistory, existingPrefs);
+    base = fallbackAgentResponse(tier, fundsDeposited, message, conversationHistory, existingPrefs);
   }
-  
-  const typedResult = result as InvestmentAgentStateType;
-  const recommendedFundsList = FUNDS.filter(f => typedResult.recommendedFunds.includes(f.id));
-  const selectedFundsList = FUNDS.filter(f => typedResult.selectedFunds.includes(f.id));
-  
-  return {
-    response: typedResult.messages[typedResult.messages.length - 1]?.content || '',
-    stage: typedResult.stage,
-    componentType: typedResult.renderedComponent,
-    recommendedFunds: recommendedFundsList,
-    selectedFunds: selectedFundsList,
-    preferences: typedResult.preferences as any,
-  };
+
+  // Enhance the user-facing text with the LLM (DeepSeek) when configured.
+  // The structured decisions above are preserved; only `response` is rewritten.
+  const llmText = await generateAgentReply({
+    tier,
+    message,
+    history: conversationHistory,
+    preferences: base.preferences,
+    recommendedFunds: base.recommendedFunds,
+    stage: base.stage,
+  });
+
+  return llmText ? { ...base, response: llmText } : base;
 }
 
 // ── Fallback Agent (no AI required) ──

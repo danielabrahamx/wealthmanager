@@ -1,10 +1,11 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { PortfolioSummary } from '../../../shared/index.js';
+import { color, radius, shadow, font } from '../lib/theme';
 
 interface Props { summary: PortfolioSummary; userId: string; }
 
-const COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
+const COLORS = ['#533afd', '#665efd', '#1c1e54', '#f96bee', '#15be53', '#ea2261'];
 
 export function IntermediateReport({ summary, userId }: Props) {
   const [news, setNews] = useState<any[]>([]);
@@ -39,34 +40,34 @@ export function IntermediateReport({ summary, userId }: Props) {
   }));
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '24px', color: '#111827' }}>
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', fontFamily: font.sans }}>
+      <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.03em', marginBottom: '24px', color: color.heading }}>
         Your Portfolio Dashboard
       </h2>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <MetricCard label="Total Value" value={`$${summary.totalValue.toLocaleString()}`} />
         <MetricCard label="Change" value={`${summary.totalChange >= 0 ? '+' : ''}$${summary.totalChange.toLocaleString()}`} 
-          color={summary.totalChange >= 0 ? '#16a34a' : '#dc2626'} />
+          color={summary.totalChange >= 0 ? color.successText : color.danger} />
         <MetricCard label="Return" value={`${summary.totalChangePercent >= 0 ? '+' : ''}${summary.totalChangePercent.toFixed(2)}%`} 
-          color={summary.totalChangePercent >= 0 ? '#16a34a' : '#dc2626'} />
+          color={summary.totalChangePercent >= 0 ? color.successText : color.danger} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Performance Trend</h3>
+        <div style={{ background: color.white, padding: '20px', borderRadius: radius.lg, border: `1px solid ${color.border}`, boxShadow: shadow.ambient }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 500, marginBottom: '12px', color: color.heading }}>Performance Trend</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={lineData}>
               <XAxis dataKey="day" fontSize={11} />
               <YAxis fontSize={11} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
               <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-              <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="value" stroke={color.purple} strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Allocation</h3>
+        <div style={{ background: color.white, padding: '20px', borderRadius: radius.lg, border: `1px solid ${color.border}`, boxShadow: shadow.ambient }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 500, marginBottom: '12px', color: color.heading }}>Allocation</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({name, percent}) => `${name.substring(0,12)} ${(percent*100).toFixed(0)}%`}>
@@ -78,15 +79,15 @@ export function IntermediateReport({ summary, userId }: Props) {
         </div>
       </div>
 
-      <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Holdings Breakdown</h3>
+      <div style={{ background: color.white, padding: '20px', borderRadius: radius.lg, border: `1px solid ${color.border}`, boxShadow: shadow.ambient, marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 500, marginBottom: '12px', color: color.heading }}>Holdings Breakdown</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-              <th style={{ textAlign: 'left', padding: '8px', fontSize: '0.8rem', color: '#6b7280' }}>FUND</th>
-              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.8rem', color: '#6b7280' }}>VALUE</th>
-              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.8rem', color: '#6b7280' }}>ALLOCATION</th>
-              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.8rem', color: '#6b7280' }}>CHANGE</th>
+            <tr style={{ borderBottom: `1px solid ${color.border}` }}>
+              <th style={{ textAlign: 'left', padding: '8px', fontSize: '0.72rem', color: color.body, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 500 }}>Fund</th>
+              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.72rem', color: color.body, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 500 }}>Value</th>
+              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.72rem', color: color.body, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 500 }}>Allocation</th>
+              <th style={{ textAlign: 'right', padding: '8px', fontSize: '0.72rem', color: color.body, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 500 }}>Change</th>
             </tr>
           </thead>
           <tbody>
@@ -109,33 +110,35 @@ export function IntermediateReport({ summary, userId }: Props) {
 
       {news.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Market News</h3>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 500, marginBottom: '12px', color: color.heading }}>Market News</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {news.slice(0, 3).map((n, i) => (
-              <div key={i} style={{ padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>{n.title}</div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{n.snippet?.substring(0, 150)}...</div>
+              <div key={i} style={{ padding: '12px', background: color.white, borderRadius: radius.md, border: `1px solid ${color.border}`, boxShadow: shadow.ambient }}>
+                <div style={{ fontWeight: 500, fontSize: '0.85rem', marginBottom: '4px', color: color.heading }}>{n.title}</div>
+                <div style={{ fontSize: '0.75rem', color: color.body }}>{n.snippet?.substring(0, 150)}...</div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px' }}>Ask a Question</h3>
+      <div style={{ background: color.white, padding: '20px', borderRadius: radius.lg, border: `1px solid ${color.border}`, boxShadow: shadow.ambient }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 500, marginBottom: '12px', color: color.heading }}>Ask a Question</h3>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <input value={askQuestion} onChange={e => setAskQuestion(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAsk()}
             placeholder="e.g., How will rate changes affect my bonds?"
-            style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem' }} />
-          <button onClick={handleAsk} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+            style={{ flex: 1, padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.md, fontSize: '0.9rem', fontWeight: 300, color: color.heading, outline: 'none' }}
+            onFocus={e => (e.target.style.borderColor = color.purple)}
+            onBlur={e => (e.target.style.borderColor = color.border)} />
+          <button onClick={handleAsk} style={{ padding: '10px 20px', background: color.purple, color: 'white', border: 'none', borderRadius: radius.md, cursor: 'pointer', fontWeight: 400, boxShadow: shadow.elevated }}>
             Ask
           </button>
         </div>
         {qa.map((item, i) => (
-          <div key={i} style={{ marginBottom: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#2563eb', marginBottom: '4px' }}>Q: {item.q}</div>
-            <div style={{ fontSize: '0.85rem', color: '#374151' }}>A: {item.a}</div>
+          <div key={i} style={{ marginBottom: '12px', padding: '12px 14px', background: color.purpleTint, borderRadius: radius.md, border: `1px solid ${color.borderSoftPurple}` }}>
+            <div style={{ fontWeight: 500, fontSize: '0.85rem', color: color.purpleDeep, marginBottom: '4px' }}>Q: {item.q}</div>
+            <div style={{ fontSize: '0.85rem', color: color.label, fontWeight: 300, lineHeight: 1.5 }}>A: {item.a}</div>
           </div>
         ))}
       </div>
@@ -143,11 +146,11 @@ export function IntermediateReport({ summary, userId }: Props) {
   );
 }
 
-function MetricCard({ label, value, color = '#111827' }: { label: string; value: string; color?: string }) {
+function MetricCard({ label, value, color: valueColor = color.heading }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
-      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 700, color }}>{value}</div>
+    <div style={{ background: color.white, padding: '20px', borderRadius: radius.lg, border: `1px solid ${color.border}`, boxShadow: shadow.ambient, textAlign: 'center' }}>
+      <div style={{ fontSize: '0.72rem', color: color.body, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      <div style={{ fontSize: '1.6rem', fontWeight: 400, color: valueColor, fontFeatureSettings: font.tnum }}>{value}</div>
     </div>
   );
 }

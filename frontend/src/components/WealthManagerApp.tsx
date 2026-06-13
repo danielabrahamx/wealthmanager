@@ -1,263 +1,110 @@
 /**
- * WealthManagerApp - Main application component
+ * WealthManagerApp — main application component.
+ *
+ * Wires the chat surface to the real AG-UI + A2UI pipeline:
+ *   - Chat turns / button actions POST to `/api/agui` (see lib/agui.ts).
+ *   - TEXT_MESSAGE_CONTENT deltas stream into the assistant chat bubble.
+ *   - CUSTOM "a2ui" events feed `useA2UI().processMessages`, rendered by
+ *     <A2UIRenderer> (the CopilotKit a2ui-renderer).
+ *   - CUSTOM directives (`view_report`) drive stage transitions.
  */
-import React, { useState, useCallback } from 'react';
-import { CopilotChat } from '@copilotkit/react-ui';
-import { useCopilotReadable } from '@copilotkit/react-core';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  A2UIProvider,
+  A2UIRenderer,
+  useA2UI,
+  basicCatalog,
+  defaultTheme,
+  type A2UIClientEventMessage,
+} from '@copilotkit/a2ui-renderer';
 import { OnboardingFlow } from './OnboardingFlow';
 import { PortfolioReport } from './PortfolioReport';
-import { 
-  SimpleChoice, FundGrid, AdvancedScreener, InvestmentConfirmation, LevelUpNotification 
-} from './GenerativeUI';
+import { streamAgui } from '../lib/agui';
+import { color, radius, shadow, font, tierAccent } from '../lib/theme';
 import type { UserTier, UserProfile } from '../../../shared/index.js';
 
 type AppStage = 'onboarding' | 'chat' | 'reporting';
 
-interface RenderedUI {
-  type: 'simple-choice' | 'fund-grid' | 'advanced-screener' | 'confirmation' | null;
-  props: Record<string, unknown>;
+const A2UI_SURFACE_ID = 'wealth-surface';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent';
+  content: string;
 }
+
+const greetingFor = (tier: UserTier): string =>
+  tier === 'beginner'
+    ? "Hi! I'm your investment assistant. I'll keep things simple for you. Just tell me: would you prefer a conservative, risky, or balanced approach?"
+    : tier === 'intermediate'
+    ? 'Welcome! I can help you select from curated funds with performance data and projections. What are your investment goals?'
+    : 'Welcome, sophisticated investor. I have access to real-time market data, advanced analytics, and Monte Carlo simulations. What would you like to explore?';
 
 export function WealthManagerApp() {
   const [stage, setStage] = useState<AppStage>('onboarding');
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [agentMessages, setAgentMessages] = useState<Array<{role: string; content: string}>>([]);
-  const [renderedUI, setRenderedUI] = useState<RenderedUI>({ type: null, props: {} });
-  const [showLevelUp, setShowLevelUp] = useState(false);
   const [effectiveTier, setEffectiveTier] = useState<UserTier>('beginner');
-  const [chatInput, setChatInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  useCopilotReadable({
-    description: 'Current user context including tier and preferences',
-    value: profile ? {
-      userId: profile.userId, tier: profile.tier,
-      fundsDeposited: profile.fundsDeposited,
-      preferences: profile.preferences,
-    } : { tier: 'beginner', fundsDeposited: 0 },
-  });
+  // Bridge: A2UIProvider owns `onAction`, but the handler (which feeds
+  // processMessages from useA2UI) lives inside ChatStage. The ref lets the
+  // provider call the latest handler without lifting useA2UI out of the tree.
+  const actionRef = useRef<((msg: A2UIClientEventMessage) => void) | null>(null);
+  const handleProviderAction = useCallback((msg: A2UIClientEventMessage) => {
+    actionRef.current?.(msg);
+  }, []);
 
   const handleOnboardingComplete = useCallback((userProfile: UserProfile) => {
     setUserId(userProfile.userId);
     setProfile(userProfile);
     setEffectiveTier(userProfile.tier);
     setStage('chat');
-    setAgentMessages([{
-      role: 'agent',
-      content: userProfile.tier === 'beginner'
-        ? "Hi! I'm your investment assistant. I'll keep things simple for you. Just tell me: would you prefer a conservative, risky, or balanced approach?"
-        : userProfile.tier === 'intermediate'
-        ? "Welcome! I can help you select from curated funds with performance data and projections. What are your investment goals?"
-        : "Welcome, sophisticated investor. I have access to real-time market data, advanced analytics, and Monte Carlo simulations. What would you like to explore?",
-    }]);
   }, []);
-
-  // Level-up detection - monitor for complex questions
-  const detectLevelUp = (message: string): boolean => {
-    const complexTerms = [
-      'monte carlo', 'simulation', 'sharpe ratio', 'alpha', 'beta',
-      'standard deviation', 'correlation', 'hedge', 'options', 'derivatives',
-      'interest rate', 'tax optimization', 'scenario analysis', 'volatility',
-      'drawdown', 'risk-adjusted', 'portfolio optimization'
-    ];
-    const lower = message.toLowerCase();
-    const complexCount = complexTerms.filter(t => lower.includes(t)).length;
-    return complexCount >= 2;
-  };
-
-  const handleSendMessage = async () => {
-    if (!chatInput.trim() || !userId || isLoading) return;
-    const message = chatInput.trim();
-    setChatInput('');
-    setIsLoading(true);
-
-    // Check for level-up
-    if (profile && effectiveTier !== 'sophisticated' && detectLevelUp(message)) {
-      setShowLevelUp(true);
-      if (effectiveTier === 'beginner') setEffectiveTier('intermediate');
-      else if (effectiveTier === 'intermediate') setEffectiveTier('sophisticated');
-      setTimeout(() => setShowLevelUp(false), 5000);
-    }
-
-    const newMessages = [...agentMessages, { role: 'user', content: message }];
-    setAgentMessages(newMessages);
-
-    try {
-      const res = await fetch('/api/agent/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          message,
-          tier: effectiveTier,
-          fundsDeposited: profile?.fundsDeposited || 0,
-          conversationHistory: newMessages.map(m => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const data = await res.json();
-      
-      setAgentMessages(prev => [...prev, { 
-        role: 'agent', content: data.message || data.content || 'Processing...' 
-      }]);
-
-      // Render tier-appropriate UI based on response
-      if (data.component) {
-        setRenderedUI({ type: data.component.type, props: data.component.props || {} });
-      } else if (data.funds && data.funds.length > 0) {
-        if (effectiveTier === 'beginner') {
-          setRenderedUI({ type: 'simple-choice', props: { funds: data.funds, recommendation: data.recommendation } });
-        } else if (effectiveTier === 'sophisticated') {
-          setRenderedUI({ type: 'advanced-screener', props: { funds: data.funds } });
-        } else {
-          setRenderedUI({ type: 'fund-grid', props: { funds: data.funds } });
-        }
-      }
-
-      if (data.investmentComplete) {
-        setRenderedUI({ type: null, props: {} });
-      }
-    } catch (err) {
-      setAgentMessages(prev => [...prev, { 
-        role: 'agent', content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAcceptInvestment = async () => {
-    if (!userId) return;
-    try {
-      await fetch('/api/agent/invest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-      setRenderedUI({ type: null, props: {} });
-      setAgentMessages(prev => [...prev, { 
-        role: 'agent', content: '✅ Investment confirmed! Go to your Portfolio to see your personalized report.' 
-      }]);
-    } catch {
-      setAgentMessages(prev => [...prev, { 
-        role: 'agent', content: 'Investment could not be completed. Please try again.' 
-      }]);
-    }
-  };
-
-  const handleViewReport = () => setStage('reporting');
-  const handleBackToChat = () => setStage('chat');
 
   if (stage === 'onboarding') {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', fontFamily: font.sans, background: color.page }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{
-          padding: '12px 20px', borderBottom: '1px solid #e5e7eb',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white',
+          padding: '14px 24px', borderBottom: `1px solid ${color.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)',
         }}>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>Adaptive Wealth Manager</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: 300, letterSpacing: '-0.02em', color: color.heading }}>Adaptive Wealth Manager</h1>
             {profile && (
               <span style={{
-                fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px',
-                background: effectiveTier === 'beginner' ? '#dbeafe' : effectiveTier === 'intermediate' ? '#dcfce7' : '#fef3c7',
-                color: effectiveTier === 'beginner' ? '#1e40af' : effectiveTier === 'intermediate' ? '#166534' : '#92400e',
-                marginLeft: '8px',
+                fontSize: '0.7rem', padding: '4px 10px', borderRadius: radius.md, fontWeight: 500,
+                textTransform: 'uppercase', letterSpacing: '0.5px',
+                background: tierAccent[effectiveTier].bg,
+                color: tierAccent[effectiveTier].fg,
               }}>
-                {effectiveTier.toUpperCase()} TIER
+                {effectiveTier} tier
                 {effectiveTier !== profile.tier && ' ⬆'}
               </span>
             )}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {stage === 'chat' && <button onClick={handleViewReport} className="btn btn-secondary">View Portfolio</button>}
-            {stage === 'reporting' && <button onClick={handleBackToChat} className="btn btn-secondary">Back to Chat</button>}
+            {stage === 'chat' && <button onClick={() => setStage('reporting')} className="btn btn-secondary">View Portfolio</button>}
+            {stage === 'reporting' && <button onClick={() => setStage('chat')} className="btn btn-secondary">Back to Chat</button>}
           </div>
         </header>
 
         <div style={{ flex: 1, overflow: 'auto' }}>
-          {stage === 'chat' && (
-            <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-              {/* Level-up notification */}
-              {showLevelUp && <LevelUpNotification newTier={effectiveTier} />}
-
-              {/* Funds display */}
-              <div style={{ marginBottom: '16px', padding: '16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                <p style={{ fontSize: '0.875rem', color: '#166534' }}>
-                  💰 ${profile?.fundsDeposited?.toLocaleString() || '0'} deposited — ready to invest!
-                </p>
-              </div>
-
-              {/* Chat messages */}
-              <div style={{ marginBottom: '24px' }}>
-                {agentMessages.map((msg, i) => (
-                  <div key={i} style={{
-                    padding: '12px 16px', marginBottom: '8px', borderRadius: '8px',
-                    background: msg.role === 'agent' ? '#f8fafc' : '#eff6ff',
-                    border: msg.role === 'agent' ? '1px solid #e2e8f0' : '1px solid #bfdbfe',
-                  }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '4px' }}>
-                      {msg.role === 'agent' ? '🤖 Assistant' : '👤 You'}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#1e293b', whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.85rem' }}>
-                    Thinking...
-                  </div>
-                )}
-              </div>
-
-              {/* Generative UI components */}
-              {renderedUI.type === 'simple-choice' && (
-                <SimpleChoice
-                  funds={renderedUI.props.funds as any[]}
-                  recommendation={renderedUI.props.recommendation as string}
-                  onAccept={handleAcceptInvestment}
-                />
-              )}
-              {renderedUI.type === 'fund-grid' && (
-                <FundGrid funds={renderedUI.props.funds as any[]} onSelect={(funds) => {
-                  handleAcceptInvestment();
-                }} />
-              )}
-              {renderedUI.type === 'advanced-screener' && (
-                <AdvancedScreener funds={renderedUI.props.funds as any[]} onSelect={(funds) => {
-                  handleAcceptInvestment();
-                }} />
-              )}
-
-              {/* Chat input */}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                <input
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask me about investing..."
-                  disabled={isLoading}
-                  style={{
-                    flex: 1, padding: '12px 16px', border: '1px solid #e5e7eb',
-                    borderRadius: '8px', fontSize: '0.9rem', outline: 'none',
-                  }}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !chatInput.trim()}
-                  style={{
-                    padding: '12px 24px', background: '#2563eb', color: 'white',
-                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-                    opacity: isLoading || !chatInput.trim() ? 0.5 : 1,
-                  }}
-                >
-                  Send
-                </button>
-              </div>
-            </div>
+          {stage === 'chat' && userId && (
+            <A2UIProvider theme={defaultTheme} catalog={basicCatalog} onAction={handleProviderAction}>
+              <ChatStage
+                userId={userId}
+                profile={profile}
+                tier={effectiveTier}
+                onTierChange={setEffectiveTier}
+                onViewReport={() => setStage('reporting')}
+                actionRef={actionRef}
+              />
+            </A2UIProvider>
           )}
 
           {stage === 'reporting' && profile && (
@@ -265,19 +112,197 @@ export function WealthManagerApp() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* CopilotKit Chat Sidebar */}
-      <div style={{ width: '420px', borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: 'white' }}>
-        <CopilotChat
-          labels={{
-            title: 'Investment Assistant',
-            initial: profile
-              ? `I analyze your questions and adapt the interface to your level. Try asking something complex!`
-              : 'Complete onboarding to start.',
-            placeholder: 'Type your investment question...',
+interface ChatStageProps {
+  userId: string;
+  profile: UserProfile | null;
+  tier: UserTier;
+  onTierChange: (tier: UserTier) => void;
+  onViewReport: () => void;
+  actionRef: React.MutableRefObject<((msg: A2UIClientEventMessage) => void) | null>;
+}
+
+// Complex terms that signal the user is ready for a richer (higher) tier.
+const COMPLEX_TERMS = [
+  'monte carlo', 'simulation', 'sharpe ratio', 'alpha', 'beta',
+  'standard deviation', 'correlation', 'hedge', 'options', 'derivatives',
+  'interest rate', 'tax optimization', 'scenario analysis', 'volatility',
+  'drawdown', 'risk-adjusted', 'portfolio optimization',
+];
+
+function detectLevelUp(message: string): boolean {
+  const lower = message.toLowerCase();
+  return COMPLEX_TERMS.filter((t) => lower.includes(t)).length >= 2;
+}
+
+function ChatStage({ userId, profile, tier, onTierChange, onViewReport, actionRef }: ChatStageProps) {
+  const { processMessages } = useA2UI();
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    { id: 'greeting', role: 'agent', content: greetingFor(tier) },
+  ]);
+  const [hasSurface, setHasSurface] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingRef = useRef(false);
+
+  // Run one AG-UI turn (chat message or A2UI action) and stream the result.
+  const runTurn = useCallback(
+    async (body: { message?: string; action?: { name: string; context?: Record<string, unknown> } }) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setIsLoading(true);
+
+      const streamId = `agent-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        ...(body.message ? [{ id: `user-${Date.now()}`, role: 'user' as const, content: body.message }] : []),
+        { id: streamId, role: 'agent', content: '' },
+      ]);
+
+      let acc = '';
+      try {
+        await streamAgui(
+          {
+            userId,
+            message: body.message,
+            action: body.action,
+            tier,
+            fundsDeposited: profile?.fundsDeposited || 0,
+            conversationHistory: messages.map((m) => ({ role: m.role, content: m.content })),
+          },
+          {
+            onText: (delta) => {
+              acc += delta;
+              setMessages((prev) => prev.map((m) => (m.id === streamId ? { ...m, content: acc } : m)));
+            },
+            onA2ui: (a2uiMessages) => {
+              processMessages(a2uiMessages);
+              setHasSurface(true);
+            },
+            onDirective: (name) => {
+              if (name === 'view_report') onViewReport();
+            },
+          },
+        );
+        if (!acc) {
+          setMessages((prev) => prev.map((m) => (m.id === streamId ? { ...m, content: '…' } : m)));
+        }
+      } catch {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === streamId ? { ...m, content: 'Sorry, I encountered an error. Please try again.' } : m)),
+        );
+      } finally {
+        loadingRef.current = false;
+        setIsLoading(false);
+      }
+    },
+    [userId, tier, profile, messages, processMessages, onViewReport],
+  );
+
+  // A2UI button clicks arrive here via the provider bridge. The renderer wraps
+  // the button's event in `userAction` ({ name, context, surfaceId, ... }).
+  const handleAction = useCallback(
+    (msg: A2UIClientEventMessage) => {
+      const action = msg.userAction;
+      if (!action?.name) return;
+      runTurn({ action: { name: action.name, context: action.context } });
+    },
+    [runTurn],
+  );
+  useEffect(() => {
+    actionRef.current = handleAction;
+  }, [actionRef, handleAction]);
+
+  const handleSend = useCallback(() => {
+    const message = input.trim();
+    if (!message || isLoading) return;
+    setInput('');
+
+    // Adaptive tier: complex questions unlock a richer surface on the next turn.
+    if (tier !== 'sophisticated' && detectLevelUp(message)) {
+      onTierChange(tier === 'beginner' ? 'intermediate' : 'sophisticated');
+      setShowLevelUp(true);
+      setTimeout(() => setShowLevelUp(false), 5000);
+    }
+
+    runTurn({ message });
+  }, [input, isLoading, tier, onTierChange, runTurn]);
+
+  return (
+    <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+      {showLevelUp && (
+        <div style={{
+          marginBottom: '16px', padding: '12px 16px', borderRadius: radius.lg,
+          background: color.purpleTint, border: `1px solid ${color.borderSoftPurple}`, color: color.purpleDeep, fontSize: '0.85rem',
+        }}>
+          ⬆ Interface upgraded to <strong>{tier.toUpperCase()}</strong> tier — you're asking advanced questions!
+        </div>
+      )}
+
+      <div style={{ marginBottom: '16px', padding: '14px 16px', background: color.successBg, borderRadius: radius.lg, border: `1px solid ${color.successBorder}` }}>
+        <p style={{ fontSize: '0.875rem', color: color.successText, fontWeight: 400 }}>
+          ${profile?.fundsDeposited?.toLocaleString() || '0'} deposited — ready to invest.
+        </p>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={{
+            padding: '14px 18px', marginBottom: '10px', borderRadius: radius.lg,
+            background: msg.role === 'agent' ? color.white : color.purpleTint,
+            border: `1px solid ${msg.role === 'agent' ? color.border : color.borderSoftPurple}`,
+            boxShadow: msg.role === 'agent' ? shadow.ambient : 'none',
+          }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px', color: msg.role === 'agent' ? color.purple : color.label, marginBottom: '6px' }}>
+              {msg.role === 'agent' ? 'Assistant' : 'You'}
+            </div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 300, color: color.heading, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+              {msg.content || (isLoading ? '…' : '')}
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div style={{ padding: '12px 16px', color: color.body, fontSize: '0.85rem' }}>Thinking...</div>
+        )}
+      </div>
+
+      {/* A2UI generative surface (rendered by the CopilotKit a2ui-renderer). */}
+      {hasSurface && (
+        <div style={{ marginBottom: '16px' }}>
+          <A2UIRenderer surfaceId={A2UI_SURFACE_ID} fallback={null} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Ask me about investing..."
+          disabled={isLoading}
+          style={{
+            flex: 1, padding: '12px 16px', border: `1px solid ${color.border}`,
+            borderRadius: radius.md, fontSize: '0.95rem', fontWeight: 300, color: color.heading, outline: 'none',
           }}
-          style={{ height: '100%' }}
+          onFocus={(e) => (e.target.style.borderColor = color.purple)}
+          onBlur={(e) => (e.target.style.borderColor = color.border)}
         />
+        <button
+          onClick={handleSend}
+          disabled={isLoading || !input.trim()}
+          style={{
+            padding: '12px 24px', background: color.purple, color: 'white',
+            border: 'none', borderRadius: radius.md, cursor: 'pointer', fontWeight: 400,
+            boxShadow: isLoading || !input.trim() ? 'none' : shadow.elevated,
+            opacity: isLoading || !input.trim() ? 0.5 : 1,
+          }}
+        >
+          Send
+        </button>
       </div>
     </div>
   );

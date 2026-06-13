@@ -9,6 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@ag-ui/core": "^0.0.57",
+    "@ag-ui/encoder": "^0.0.57",
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.74",
     "@langchain/openai": "^0.3.0",

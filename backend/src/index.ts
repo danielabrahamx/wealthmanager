@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { onboardingRouter } from './routes/onboarding.js';
 import { agentRouter } from './routes/agent.js';
+import { aguiRouter } from './routes/agui.js';
 import { reportingRouter } from './routes/reporting.js';
 import { connectRedis } from './redis/client.js';
 
@@ -15,6 +16,7 @@ app.use(express.json());
 // Routes
 app.use('/api/onboarding', onboardingRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/agui', aguiRouter);
 app.use('/api/reporting', reportingRouter);
 
 // Health check
