@@ -1,5 +1,5 @@
 /**
- * AG-UI endpoint — the agentic generative-UI surface.
+ * AG-UI endpoint - the agentic generative-UI surface.
  *
  * POST /api/agui streams a spec-compliant AG-UI event sequence (text + A2UI
  * surface) for a chat turn or a UI action dispatched from an A2UI button.

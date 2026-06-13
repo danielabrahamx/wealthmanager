@@ -37,21 +37,21 @@ export function SophisticatedReport({ summary, userId }: Props) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
         <MetricCard label="Total Value" value={`$${summary.totalValue.toLocaleString()}`} />
-        <MetricCard label="Sharpe Ratio" value={riskMetrics.sharpeRatio?.toFixed(2) || '—'} />
-        <MetricCard label="Alpha" value={`${riskMetrics.alpha?.toFixed(1) || '—'}%`} />
-        <MetricCard label="Beta" value={riskMetrics.beta?.toFixed(2) || '—'} />
+        <MetricCard label="Sharpe Ratio" value={riskMetrics.sharpeRatio?.toFixed(2) || '-'} />
+        <MetricCard label="Alpha" value={`${riskMetrics.alpha?.toFixed(1) || '-'}%`} />
+        <MetricCard label="Beta" value={riskMetrics.beta?.toFixed(2) || '-'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        <MetricCard label="Max Drawdown" value={`${riskMetrics.maxDrawdown?.toFixed(1) || '—'}%`} color="#dc2626" />
-        <MetricCard label="Volatility" value={`${riskMetrics.volatility?.toFixed(1) || '—'}%`} color="#d97706" />
+        <MetricCard label="Max Drawdown" value={`${riskMetrics.maxDrawdown?.toFixed(1) || '-'}%`} color="#dc2626" />
+        <MetricCard label="Volatility" value={`${riskMetrics.volatility?.toFixed(1) || '-'}%`} color="#d97706" />
         <MetricCard label="Return" value={`${summary.totalChangePercent >= 0 ? '+' : ''}${summary.totalChangePercent.toFixed(2)}%`} color={summary.totalChangePercent >= 0 ? '#16a34a' : '#dc2626'} />
       </div>
 
       <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px' }}>Monte Carlo Simulation (10-Year Projection)</h3>
         <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
-          Based on {analytics?.monteCarlo?.[0] ? '500' : '0'} simulations — shaded area shows 10th-90th percentile range
+          Based on {analytics?.monteCarlo?.[0] ? '500' : '0'} simulations - shaded area shows 10th-90th percentile range
         </p>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={monteCarloData}>
@@ -147,7 +147,7 @@ export function SophisticatedReport({ summary, userId }: Props) {
                   {data.change >= 0 ? '+' : ''}{data.change?.toFixed(2)} ({data.changePercent?.toFixed(2)}%)
                 </div>
                 <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '4px' }}>
-                  Vol: {(data.volume / 1000000).toFixed(1)}M | P/E: {data.peRatio || '—'}
+                  Vol: {(data.volume / 1000000).toFixed(1)}M | P/E: {data.peRatio || '-'}
                 </div>
                 <div style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: '2px' }}>
                   Source: {data.source}

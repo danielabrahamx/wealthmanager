@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OnboardingFlow - 2-step onboarding
  */
 import React, { useState } from 'react';
@@ -10,9 +10,9 @@ interface OnboardingFlowProps {
 }
 
 const TIERS: { value: UserTier; label: string; desc: string; icon: string }[] = [
-  { value: 'beginner', label: 'Beginner', desc: 'New to investing — I want simple guidance', icon: '🌱' },
-  { value: 'intermediate', label: 'Intermediate', desc: 'Some experience — show me the options', icon: '📈' },
-  { value: 'sophisticated', label: 'Sophisticated', desc: 'Experienced investor — give me the full toolkit', icon: '🏦' },
+  { value: 'beginner', label: 'Beginner', desc: 'New to investing - I want simple guidance', icon: '🌱' },
+  { value: 'intermediate', label: 'Intermediate', desc: 'Some experience - show me the options', icon: '📈' },
+  { value: 'sophisticated', label: 'Sophisticated', desc: 'Experienced investor - give me the full toolkit', icon: '🏦' },
 ];
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
@@ -223,6 +223,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               ))}
             </div>
             <button
+              className="btn-press"
               onClick={handleDeposit}
               disabled={loading}
               style={{

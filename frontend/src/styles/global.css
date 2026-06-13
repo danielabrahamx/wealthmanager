@@ -6,7 +6,7 @@
   box-sizing: border-box;
 }
 
-/* Stripe-inspired design system — see frontend/src/lib/theme.ts */
+/* Stripe-inspired design system - see frontend/src/lib/theme.ts */
 :root {
   --primary: #533afd;
   --primary-light: #665efd;
@@ -34,6 +34,8 @@
   --shadow-lg: rgba(50,50,93,0.25) 0px 30px 45px -30px, rgba(0,0,0,0.1) 0px 18px 36px -18px;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   --font-mono: 'Source Code Pro', SFMono-Regular, Menlo, monospace;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 body {
@@ -139,9 +141,13 @@ code, pre, .mono {
   border-radius: var(--radius);
   font-size: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.18s var(--ease-out), border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   text-align: left;
   color: var(--text);
+}
+
+.tier-option:active {
+  transform: scale(0.99);
 }
 
 .tier-option:hover {
@@ -207,7 +213,16 @@ code, pre, .mono {
   font-size: 15px;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: transform 0.16s var(--ease-out), background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.btn:active,
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+.btn-press {
+  transition: transform 0.16s var(--ease-out), background 0.18s ease, box-shadow 0.18s ease;
 }
 
 .btn-primary {
@@ -354,7 +369,7 @@ code, pre, .mono {
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.18s var(--ease-out), border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .choice-btn:hover {
@@ -362,6 +377,10 @@ code, pre, .mono {
   background: var(--primary-tint);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.choice-btn:active {
+  transform: scale(0.97);
 }
 
 /* Fund Grid */
@@ -378,7 +397,7 @@ code, pre, .mono {
   border-radius: var(--radius);
   padding: 20px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.18s var(--ease-out), border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .fund-card:hover {
@@ -515,7 +534,29 @@ code, pre, .mono {
 }
 
 .fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.32s var(--ease-out) both;
+}
+
+/* Staggered list entrance: set animation-delay inline per item. */
+.stagger-item {
+  opacity: 0;
+  animation: fadeIn 0.32s var(--ease-out) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .fade-in,
+  .stagger-item {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .btn:active,
+  .btn-press:active,
+  .choice-btn:active,
+  .tier-option:active {
+    transform: none;
+  }
 }
 
 /* Loading spinner */

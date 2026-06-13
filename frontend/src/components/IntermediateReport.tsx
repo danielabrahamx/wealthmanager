@@ -92,14 +92,14 @@ export function IntermediateReport({ summary, userId }: Props) {
           </thead>
           <tbody>
             {summary.holdings.map(h => (
-              <tr key={h.fundId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <tr key={h.fundId} style={{ borderBottom: `1px solid ${color.border}` }}>
                 <td style={{ padding: '10px 8px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{h.fundName}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{h.ticker}</div>
+                  <div style={{ fontWeight: 500, fontSize: '0.85rem', color: color.heading }}>{h.fundName}</div>
+                  <div style={{ fontSize: '0.7rem', color: color.body }}>{h.ticker}</div>
                 </td>
-                <td style={{ textAlign: 'right', padding: '10px 8px', fontWeight: 600 }}>${h.currentValue.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', padding: '10px 8px' }}>{h.allocation}%</td>
-                <td style={{ textAlign: 'right', padding: '10px 8px', color: h.change >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                <td style={{ textAlign: 'right', padding: '10px 8px', fontWeight: 500, color: color.heading, fontFeatureSettings: font.tnum }}>${h.currentValue.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', padding: '10px 8px', color: color.label, fontFeatureSettings: font.tnum }}>{h.allocation}%</td>
+                <td style={{ textAlign: 'right', padding: '10px 8px', color: h.change >= 0 ? color.successText : color.danger, fontWeight: 500, fontFeatureSettings: font.tnum }}>
                   {h.change >= 0 ? '+' : ''}{h.changePercent.toFixed(1)}%
                 </td>
               </tr>
@@ -131,7 +131,7 @@ export function IntermediateReport({ summary, userId }: Props) {
             style={{ flex: 1, padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.md, fontSize: '0.9rem', fontWeight: 300, color: color.heading, outline: 'none' }}
             onFocus={e => (e.target.style.borderColor = color.purple)}
             onBlur={e => (e.target.style.borderColor = color.border)} />
-          <button onClick={handleAsk} style={{ padding: '10px 20px', background: color.purple, color: 'white', border: 'none', borderRadius: radius.md, cursor: 'pointer', fontWeight: 400, boxShadow: shadow.elevated }}>
+          <button className="btn-press" onClick={handleAsk} style={{ padding: '10px 20px', background: color.purple, color: 'white', border: 'none', borderRadius: radius.md, cursor: 'pointer', fontWeight: 400, boxShadow: shadow.elevated }}>
             Ask
           </button>
         </div>

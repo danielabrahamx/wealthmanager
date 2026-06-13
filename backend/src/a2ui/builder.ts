@@ -30,7 +30,7 @@ export interface ComponentNode {
   [prop: string]: unknown;
 }
 
-/** A2UI button action — surfaces a named event back to the agent on click. */
+/** A2UI button action - surfaces a named event back to the agent on click. */
 function event(name: string, context: Record<string, unknown> = {}) {
   return { event: { name, context } };
 }
@@ -71,7 +71,7 @@ function pct(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 }
 
-/** Beginner — a single, reassuring binary choice. */
+/** Beginner - a single, reassuring binary choice. */
 export function buildSimpleChoice(recommendation: string, funds: Fund[]): A2uiMessage[] {
   const s = new Surface();
   const lead = funds[0];
@@ -104,7 +104,7 @@ export function buildSimpleChoice(recommendation: string, funds: Fund[]): A2uiMe
   return envelope(s);
 }
 
-/** Intermediate — a grid/list of recommended funds, each selectable. */
+/** Intermediate - a grid/list of recommended funds, each selectable. */
 export function buildFundGrid(funds: Fund[]): A2uiMessage[] {
   const s = new Surface();
   const children: string[] = [];
@@ -145,7 +145,7 @@ export function buildFundGrid(funds: Fund[]): A2uiMessage[] {
   return envelope(s);
 }
 
-/** Sophisticated — full screener with metrics + analytics actions. */
+/** Sophisticated - full screener with metrics + analytics actions. */
 export function buildAdvancedScreener(funds: Fund[], opts: { hasLiveData: boolean } = { hasLiveData: false }): A2uiMessage[] {
   const s = new Surface();
   const children: string[] = [];

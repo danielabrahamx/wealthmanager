@@ -1,5 +1,5 @@
 /**
- * WealthManagerApp — main application component.
+ * WealthManagerApp - main application component.
  *
  * Wires the chat surface to the real AG-UI + A2UI pipeline:
  *   - Chat turns / button actions POST to `/api/agui` (see lib/agui.ts).
@@ -239,13 +239,13 @@ function ChatStage({ userId, profile, tier, onTierChange, onViewReport, actionRe
           marginBottom: '16px', padding: '12px 16px', borderRadius: radius.lg,
           background: color.purpleTint, border: `1px solid ${color.borderSoftPurple}`, color: color.purpleDeep, fontSize: '0.85rem',
         }}>
-          ⬆ Interface upgraded to <strong>{tier.toUpperCase()}</strong> tier — you're asking advanced questions!
+          ⬆ Interface upgraded to <strong>{tier.toUpperCase()}</strong> tier - you're asking advanced questions!
         </div>
       )}
 
       <div style={{ marginBottom: '16px', padding: '14px 16px', background: color.successBg, borderRadius: radius.lg, border: `1px solid ${color.successBorder}` }}>
         <p style={{ fontSize: '0.875rem', color: color.successText, fontWeight: 400 }}>
-          ${profile?.fundsDeposited?.toLocaleString() || '0'} deposited — ready to invest.
+          ${profile?.fundsDeposited?.toLocaleString() || '0'} deposited - ready to invest.
         </p>
       </div>
 
@@ -292,6 +292,7 @@ function ChatStage({ userId, profile, tier, onTierChange, onViewReport, actionRe
           onBlur={(e) => (e.target.style.borderColor = color.border)}
         />
         <button
+          className="btn-press"
           onClick={handleSend}
           disabled={isLoading || !input.trim()}
           style={{

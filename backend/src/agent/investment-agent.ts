@@ -168,7 +168,7 @@ function getRecommendedFunds(prefs: InvestmentPreferences | null, isDefaultConse
     return FUNDS.filter(f => ['VGT', 'QQQ', 'ARKK', 'VWO', 'IWM', 'EEM', 'SPY', 'XLE'].includes(f.ticker.toUpperCase()));
   }
   
-  // Default: Balanced — return 10 funds for intermediate, 20+ for sophisticated
+  // Default: Balanced - return 10 funds for intermediate, 20+ for sophisticated
   const balanced = FUNDS.filter(f => ['VTI', 'VXUS', 'BND', 'SPY', 'VWO', 'VGT', 'SCHD', 'VNQ', 'GLD', 'QQQ'].includes(f.ticker.toUpperCase()));
   return balanced;
 }
@@ -180,7 +180,7 @@ function generateAgentResponse(state: InvestmentAgentStateType): string {
   
   if (isDefaultCon) {
     if (tier === 'beginner') {
-      return "I understand — you want your money somewhere safe and simple. I'll recommend a conservative portfolio that prioritizes protecting your money while still giving you modest growth. This portfolio is about 60% bonds and 40% diversified stocks. Think of it like a steady, reliable car rather than a race car. Would you like to see my recommendation?";
+      return "I understand - you want your money somewhere safe and simple. I'll recommend a conservative portfolio that prioritizes protecting your money while still giving you modest growth. This portfolio is about 60% bonds and 40% diversified stocks. Think of it like a steady, reliable car rather than a race car. Would you like to see my recommendation?";
     }
     return "Understood. Based on your preference for security, I'm recommending a conservative portfolio: 60% bonds, 40% diversified equities. This prioritizes capital preservation with modest growth potential. I'll show you the matching funds now.";
   }
@@ -201,12 +201,12 @@ function generateAgentResponse(state: InvestmentAgentStateType): string {
     if (tier === 'beginner') {
       return "And what's your main goal for this money? Are you saving for retirement down the road, looking for steady income now, or hoping to grow your money over time?";
     }
-    return "What's your primary investment objective — retirement planning, capital growth, income generation, or capital preservation?";
+    return "What's your primary investment objective - retirement planning, capital growth, income generation, or capital preservation?";
   }
   
   if (!prefs?.timeHorizon) {
     if (tier === 'beginner') {
-      return "One more thing — when do you think you'll need this money? Is it for something soon (a year or two), a few years from now, or way down the road?";
+      return "One more thing - when do you think you'll need this money? Is it for something soon (a year or two), a few years from now, or way down the road?";
     }
     return "What's your investment time horizon? Short-term (1-2 years), medium-term (3-7 years), or long-term (8+ years)?";
   }
@@ -445,19 +445,19 @@ function fallbackAgentResponse(
 
   if (tier === 'beginner') {
     if (isDefault) {
-      response = "I understand — let's keep things safe and simple. I recommend our Conservative Portfolio: 60% in bonds (BND) and 40% in diversified stocks (VTI). This is a low-risk approach that prioritizes keeping your money secure while earning modest returns. Would you like to accept this recommendation?";
+      response = "I understand - let's keep things safe and simple. I recommend our Conservative Portfolio: 60% in bonds (BND) and 40% in diversified stocks (VTI). This is a low-risk approach that prioritizes keeping your money secure while earning modest returns. Would you like to accept this recommendation?";
       componentType = 'simple-choice';
       recommendedFunds = FUNDS.filter(f => f.riskLevel === 'low' || f.id === 'vti');
       preferences = { riskTolerance: 3, investmentGoal: 'preservation', timeHorizon: 'short' };
       stage = 'fund-selection';
     } else if (lower.includes('risky') || lower.includes('aggressive') || lower.includes('high risk')) {
-      response = "An aggressive approach could grow your money faster but comes with more ups and downs. For a higher-risk strategy, I recommend focusing on growth stocks like VUG and sector funds. Just remember — with higher potential returns comes more volatility. Would you like to see this option?";
+      response = "An aggressive approach could grow your money faster but comes with more ups and downs. For a higher-risk strategy, I recommend focusing on growth stocks like VUG and sector funds. Just remember - with higher potential returns comes more volatility. Would you like to see this option?";
       componentType = 'simple-choice';
       recommendedFunds = FUNDS.filter(f => f.riskLevel === 'high');
       preferences = { riskTolerance: 8, investmentGoal: 'growth', timeHorizon: 'long' };
       stage = 'fund-selection';
     } else {
-      response = "A balanced approach is the sweet spot — you get growth potential with some protection. I recommend mixing stocks and bonds. Would you prefer a conservative (safer), balanced (moderate), or aggressive (higher growth) mix?";
+      response = "A balanced approach is the sweet spot - you get growth potential with some protection. I recommend mixing stocks and bonds. Would you prefer a conservative (safer), balanced (moderate), or aggressive (higher growth) mix?";
       componentType = 'simple-choice';
     }
   } else if (tier === 'intermediate') {

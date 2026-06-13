@@ -19,7 +19,7 @@ export const color = {
   purpleTint: 'rgba(83,58,253,0.06)',
 
   // Text
-  heading: '#061b31', // deep navy — never pure black
+  heading: '#061b31', // deep navy - never pure black
   label: '#273951',
   body: '#64748d',
 
@@ -39,8 +39,10 @@ export const color = {
   successBorder: 'rgba(21,190,83,0.30)',
   danger: '#ea2261',
   dangerBg: 'rgba(234,34,97,0.10)',
+  warning: '#9b6829',
+  warningBg: 'rgba(155,104,41,0.10)',
 
-  // Decorative accents (gradients only — never buttons/links)
+  // Decorative accents (gradients only - never buttons/links)
   ruby: '#ea2261',
   magenta: '#f96bee',
 } as const;
@@ -54,9 +56,9 @@ export const radius = {
 export const shadow = {
   // Soft ambient lift for standard cards.
   ambient: 'rgba(23,23,23,0.08) 0px 15px 35px 0px, rgba(23,23,23,0.06) 0px 5px 15px 0px',
-  // Elevated — the signature blue-tinted multi-layer shadow.
+  // Elevated - the signature blue-tinted multi-layer shadow.
   elevated: 'rgba(50,50,93,0.25) 0px 30px 45px -30px, rgba(0,0,0,0.1) 0px 18px 36px -18px',
-  // Deep — modals and floating panels.
+  // Deep - modals and floating panels.
   deep: 'rgba(3,3,39,0.25) 0px 14px 21px -14px, rgba(0,0,0,0.1) 0px 8px 17px -8px',
 } as const;
 

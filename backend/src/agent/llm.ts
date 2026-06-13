@@ -1,5 +1,5 @@
 /**
- * LLM client — DeepSeek via the OpenAI-compatible API.
+ * LLM client - DeepSeek via the OpenAI-compatible API.
  *
  * DeepSeek exposes an OpenAI-compatible endpoint, so we reuse @langchain/openai's
  * ChatOpenAI with a base-URL override. If DEEPSEEK_API_KEY is absent (or a call
@@ -51,12 +51,12 @@ interface ReplyContext {
 /**
  * Per-tier persona. Each tier gets a genuinely different assistant: a different
  * vocabulary ceiling, sentence length, and what it's even allowed to mention.
- * The beginner persona is the strictest — no tickers, no jargon, no numbers.
+ * The beginner persona is the strictest - no tickers, no jargon, no numbers.
  */
 const PERSONA: Record<UserTier, string[]> = {
   beginner: [
     'You are talking to a COMPLETE BEGINNER who has never invested before and finds money stressful.',
-    'Tone: warm, calm, encouraging — like a kind friend, not a banker.',
+    'Tone: warm, calm, encouraging - like a kind friend, not a banker.',
     'HARD RULES:',
     '- NEVER use ticker symbols (e.g. VTI, BND, SPY) or fund names. Say "a mix of investments" instead.',
     '- NEVER use jargon: no "diversified", "allocation", "equities", "bonds", "expense ratio", "volatility", "portfolio".',
@@ -88,7 +88,7 @@ export async function generateAgentReply(ctx: ReplyContext): Promise<string | nu
   const model = getChatModel();
   if (!model) return null;
 
-  // Beginners never see tickers — describe funds generically so the LLM can't
+  // Beginners never see tickers - describe funds generically so the LLM can't
   // leak symbols. Higher tiers get the full ticker/return detail to reference.
   const fundList =
     ctx.tier === 'beginner'
@@ -100,7 +100,7 @@ export async function generateAgentReply(ctx: ReplyContext): Promise<string | nu
 
   const system = [
     ...PERSONA[ctx.tier],
-    'A separate system renders the interactive UI (fund cards / choices) — do NOT describe buttons or UI.',
+    'A separate system renders the interactive UI (fund cards / choices) - do NOT describe buttons or UI.',
     'Never invent tickers, prices, or returns.',
     'Do not use markdown headings.',
     fundList ? `Recommended funds you may reference: ${fundList}` : '',

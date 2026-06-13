@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 
-// ── Simple Choice (Beginner) ──
+// â”€â”€ Simple Choice (Beginner) â”€â”€
 
 interface SimpleChoiceProps {
   question: string;
@@ -62,7 +62,7 @@ export function SimpleChoice({ question, options, onSelect }: SimpleChoiceProps)
   );
 }
 
-// ── Fund Grid (Intermediate) ──
+// â”€â”€ Fund Grid (Intermediate) â”€â”€
 
 export interface FundOption {
   id: string;
@@ -83,7 +83,7 @@ export function FundGrid({ funds, onSelect, selectedId }: FundGridProps) {
   return (
     <div style={{ marginBottom: '16px' }}>
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>
-        📊 Top Fund Recommendations
+        ðŸ“Š Top Fund Recommendations
       </h3>
       <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '16px' }}>
         Based on your preferences, here are {funds.length} curated funds:
@@ -109,7 +109,7 @@ export function FundGrid({ funds, onSelect, selectedId }: FundGridProps) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>{fund.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{fund.ticker} · {fund.category}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{fund.ticker} Â· {fund.category}</div>
                 </div>
                 <span style={{
                   padding: '2px 8px',
@@ -140,7 +140,7 @@ export function FundGrid({ funds, onSelect, selectedId }: FundGridProps) {
   );
 }
 
-// ── Advanced Screener (Sophisticated) ──
+// â”€â”€ Advanced Screener (Sophisticated) â”€â”€
 
 interface AdvancedScreenerProps {
   funds: FundOption[];
@@ -163,7 +163,7 @@ export function AdvancedScreener({ funds, onSelect, onFilterChange }: AdvancedSc
   return (
     <div style={{ marginBottom: '16px' }}>
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>
-        🔍 Advanced Fund Screener
+        ðŸ” Advanced Fund Screener
       </h3>
 
       {/* Filters */}
@@ -199,7 +199,7 @@ export function AdvancedScreener({ funds, onSelect, onFilterChange }: AdvancedSc
       </div>
 
       <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '12px' }}>
-        Showing {filtered.length} of {funds.length} funds · {riskFilter === 'all' ? 'All risk levels' : `${riskFilter} risk`} · Min return: {minReturn}%
+        Showing {filtered.length} of {funds.length} funds Â· {riskFilter === 'all' ? 'All risk levels' : `${riskFilter} risk`} Â· Min return: {minReturn}%
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
@@ -262,7 +262,7 @@ export function AdvancedScreener({ funds, onSelect, onFilterChange }: AdvancedSc
   );
 }
 
-// ── Investment Confirmation (All Tiers) ──
+// â”€â”€ Investment Confirmation (All Tiers) â”€â”€
 
 interface ConfirmationProps {
   fundName: string;
@@ -281,7 +281,7 @@ export function InvestmentConfirmation({ fundName, amount, onConfirm, onCancel }
       textAlign: 'center',
       marginBottom: '16px',
     }}>
-      <div style={{ fontSize: '3rem', marginBottom: '8px' }}>✅</div>
+      <div style={{ fontSize: '3rem', marginBottom: '8px' }}>âœ…</div>
       <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#166534', marginBottom: '8px' }}>
         Invest ${amount.toLocaleString()} in {fundName}?
       </h3>
@@ -302,7 +302,7 @@ export function InvestmentConfirmation({ fundName, amount, onConfirm, onCancel }
             cursor: 'pointer',
           }}
         >
-          ✓ Yes, Invest
+          âœ“ Yes, Invest
         </button>
         <button
           onClick={onCancel}
@@ -317,14 +317,14 @@ export function InvestmentConfirmation({ fundName, amount, onConfirm, onCancel }
             cursor: 'pointer',
           }}
         >
-          ✗ Not Yet
+          âœ- Not Yet
         </button>
       </div>
     </div>
   );
 }
 
-// ── Level-Up Notification ──
+// â”€â”€ Level-Up Notification â”€â”€
 
 interface LevelUpProps {
   newCapability: string;
@@ -343,7 +343,7 @@ export function LevelUpNotification({ newCapability, message }: LevelUpProps) {
       alignItems: 'center',
       gap: '12px',
     }}>
-      <span style={{ fontSize: '1.5rem' }}>⬆️</span>
+      <span style={{ fontSize: '1.5rem' }}>â¬†ï¸</span>
       <div>
         <div style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.9rem' }}>
           Level Up! {newCapability} unlocked
